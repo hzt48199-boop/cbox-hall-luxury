@@ -707,7 +707,7 @@
   P.multiButtons = function (rect) {
     var g = this.g, s = g.vs, W = this.W, self = this, bw, y, x0, list = [];
     if (g.game === 'doudizhu') {
-      y = rect.y + rect.h - 66 - 10 - 62;
+      y = rect.y + rect.h - (W >= 700 && window.GH && GH.LuxCards ? 86 : 66) - 10 - 62;
       if (s.phase === 'bid') {
         [0, 1, 2, 3].forEach(function (b) { list.push({ t: b === 0 ? 'No Bid' : T('{0} pts', b), dis: b !== 0 && b <= s.bid.high, color: b === 0 ? '#546e7a' : '#ef6c00', cb: function () { self.sendMulti({ bid: b }); } }); });
       } else {
