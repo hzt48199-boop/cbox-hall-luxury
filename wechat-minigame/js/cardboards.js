@@ -100,7 +100,7 @@
       var s = g.vs, me = g.seat, W = app.W, names = g.names || {}, self = this, order = [(me + 1) % 4 + 1, (me + 2) % 4 + 1, (me + 3) % 4 + 1, me];
       // 实际顺序: 上家(左) 对家 下家(右) 我 → 自上而下排列为 下家、对家、上家、我 以便阅读
       order = [me % 4 + 1, (me + 1) % 4 + 1, (me + 2) % 4 + 1];
-      var wide = W >= 700, y = rect.y + 2, bh = LC ? (wide ? 100 : 96) : (wide ? 84 : 74), tw = LC ? (wide ? 25 : 18) : (wide ? 20 : 15), th = LC ? (wide ? 36 : 26) : (wide ? 28 : 21), rw = LC ? tw * 0.92 : 12, rh = LC ? th - 4 : 17;
+      var wide = W >= 700, y = rect.y + 2, bh = LC ? (wide ? 88 : 80) : (wide ? 84 : 74), tw = LC ? (wide ? 20 : 15) : (wide ? 20 : 15), th = LC ? (wide ? 29 : 22) : (wide ? 28 : 21), rw = LC ? tw * 0.85 : 12, rh = LC ? th - 4 : 17;
       order.forEach(function (p) {
         var act = s.turn === p && !s.over;
         rrect(ctx, 6, y, W - 12, bh, 8); ctx.fillStyle = act ? 'rgba(255,214,0,0.18)' : 'rgba(0,0,0,0.22)'; ctx.fill(); if (act) { ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke(); }
@@ -111,8 +111,8 @@
         if (s.over && s.hands[p]) { var hh = s.hands[p]; hh.forEach(function (t, i) { drawTile(ctx, 14 + i * (rw + 1), y + 19, rw, rh, t, {}); }); }
         else text(ctx, T('Hand {0}', s.handCounts[p]), W - 14, y + 11, 12, '#cfe8d5', false, 'right');
         // 副露(右上)
-        var melds = s.melds[p], mxw = 0; var mtw = LC ? 14 : 11; melds.forEach(function (m) { mxw += m.tiles.length * (mtw + 1) + 4; });
-        var cx = W - 12 - mxw; melds.forEach(function (m) { cx += drawMeld(ctx, m, cx, y + 20, mtw, LC ? 20 : 16) + 0; });
+        var melds = s.melds[p], mxw = 0; var mtw = LC ? (wide ? 13 : 11) : 11; melds.forEach(function (m) { mxw += m.tiles.length * (mtw + 1) + 4; });
+        var cx = W - 12 - mxw; melds.forEach(function (m) { cx += drawMeld(ctx, m, cx, y + 20, mtw, LC ? (wide ? 18 : 16) : 16) + 0; });
         // 牌河
         var ds = s.discards[p], per = Math.floor((W - 28) / (tw + 1)), startY = y + 40;
         ds.forEach(function (t, i) { var col = i % per, row = Math.floor(i / per); drawTile(ctx, 14 + col * (tw + 1), startY + row * (th - 2) + (s.over ? (LC ? rh - 14 : 14) : 0), tw, th - 3, t, { hl: s.lastDiscard && s.lastDiscard.seat === p && i === ds.length - 1 && !s.over }); });
@@ -120,13 +120,13 @@
       });
       // 我的牌河与副露
       var ds2 = s.discards[me], per2 = Math.floor((W - 28) / (tw + 1)), act2 = s.turn === me && !s.over;
-      rrect(ctx, 6, y, W - 12, LC ? 78 : 64, 8); ctx.fillStyle = act2 ? 'rgba(255,214,0,0.18)' : 'rgba(0,0,0,0.22)'; ctx.fill(); if (act2) { ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke(); }
+      rrect(ctx, 6, y, W - 12, LC ? 68 : 64, 8); ctx.fillStyle = act2 ? 'rgba(255,214,0,0.18)' : 'rgba(0,0,0,0.22)'; ctx.fill(); if (act2) { ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke(); }
       text(ctx, self.wind(s, me) + ' ' + T(names[me] || 'Me') + (me === s.dealer ? T(' · dealer') : '') + '  ' + T('Wall {0}', Math.max(0, s.wallCount - 14)), 14, y + 11, 12, act2 ? '#ffd600' : '#cfe8d5', true, 'left');
       ds2.forEach(function (t, i) { drawTile(ctx, 14 + (i % per2) * (tw + 1), y + 20 + Math.floor(i / per2) * (th - 2), tw, th - 3, t, { hl: s.lastDiscard && s.lastDiscard.seat === me && i === ds2.length - 1 && !s.over }); });
-      y += LC ? 82 : 68;
+      y += LC ? 72 : 68;
       // 手牌
-      var hand = s.hands[me] || [], n = hand.length, melds = s.melds[me], two = W < 700 && !!LC, perRow = two ? Math.ceil((n + (s.drawn >= 0 && s.turn === me && s.phase === 'discard' ? 0 : 0)) / 2) : n;
-      var hw = two ? Math.min(46, (W - 16) / (Math.max(7, perRow) + 0.3)) : Math.min(W >= 700 ? (LC ? 54 : 42) : 27, (W - 12 - 4) / 15), hh2 = hw * (LC ? 1.38 : 1.42), hy = y + 30;
+      var hand = s.hands[me] || [], n = hand.length, melds = s.melds[me], two = false, perRow = two ? Math.ceil((n + (s.drawn >= 0 && s.turn === me && s.phase === 'discard' ? 0 : 0)) / 2) : n;
+      var hw = two ? Math.min(46, (W - 16) / (Math.max(7, perRow) + 0.3)) : Math.min(W >= 700 ? (LC ? 40 : 42) : (LC ? 26 : 27), (W - 12 - 4) / (LC ? 15.5 : 15)), hh2 = hw * (LC ? 1.36 : 1.42), hy = y + 30;
       var mw = two ? hw * 0.5 : hw * 0.62, meldW = 0; melds.forEach(function (m) { meldW += m.tiles.length * (mw + 1) + 6; });
       var gap = s.drawn >= 0 && s.turn === me && s.phase === 'discard' ? 8 : 0, total = n * (hw + 1) + gap + (two ? 0 : meldW), sx = Math.max(4, (W - total) / 2);
       var cx2 = sx; if (two) { cx2 = Math.max(4, (W - meldW) / 2); }
