@@ -144,7 +144,22 @@
   };
   P.header = function (title, back) {
     var c = this.ctx, W = this.W, lobby = this.scene === 'lobby', self = this;
-    Lux.wood(c, 0, -4, W, 94, 0); c.fillStyle = 'rgba(0,0,0,0.38)'; c.fillRect(0, 0, W, 90); c.fillStyle = Lux.goldGrad(c, 86, 4, true); c.fillRect(0, 87, W, 3);
+    var isDdz = this.cur && this.cur.game === 'doudizhu' && !lobby;
+    if (isDdz) {
+      // 腾讯斗地主风格: 蓝天渐变标题栏
+      var hg = c.createLinearGradient(0, 0, 0, 94);
+      hg.addColorStop(0, '#5eb8f0'); hg.addColorStop(1, '#3a9ae0');
+      c.fillStyle = hg; c.fillRect(0, 0, W, 94);
+      // 白云装饰
+      c.save(); c.globalAlpha = 0.2; c.fillStyle = '#fff';
+      for (var hi = 0; hi < 3; hi++) {
+        var hx = (hi * 263) % W, hy = 20 + (hi * 47) % 40;
+        c.beginPath(); c.arc(hx, hy, 18, 0, 6.3); c.arc(hx + 20, hy - 6, 14, 0, 6.3); c.arc(hx + 40, hy, 16, 0, 6.3); c.fill();
+      }
+      c.restore();
+    } else {
+      Lux.wood(c, 0, -4, W, 94, 0); c.fillStyle = 'rgba(0,0,0,0.38)'; c.fillRect(0, 0, W, 90); c.fillStyle = Lux.goldGrad(c, 86, 4, true); c.fillRect(0, 87, W, 3);
+    }
     var pad = lobby ? Math.max(12, (W - Math.min(W - 24, 520)) / 2) : 8;
     if (lobby) {
       this.barFrom = this.hits.length; // taps inside the fixed bar only reach the bar's own buttons
@@ -153,15 +168,15 @@
       this.btn(W - pad - lw, 10, lw, 32, lang, function () { this.toggleLang(); }.bind(this), { color: '#ff8f00', size: 14, label: lang });
       this.btn(W - pad - lw - 6 - bw, 10, bw, 32, '← Back to website', function () { try { if (typeof window !== 'undefined' && window.location) window.location.href = WEBSITE_URL; } catch (e) { /* non-web platform */ } }, { color: '#546e7a', size: 12 });
     } else {
-      this.brandLine(11, true); B.text(c, title, W / 2, 31, 18, '#f6e3a1', 'serif', 'center', W - 156);
-      if (back) this.btn(8, 8, 64, 32, 'Back', back, { color: '#546e7a', size: 15 });
+      this.brandLine(11, true); B.text(c, title, W / 2, 31, 18, isDdz ? '#ffffff' : '#f6e3a1', 'serif', 'center', W - 156);
+      if (back) this.btn(8, 8, 64, 32, 'Back', back, isDdz ? { color: '#1976d2', size: 15 } : { color: '#546e7a', size: 15 });
     }
     // sound / music toggles (visible on every screen)
     var tw = lobby ? 92 : Math.min(150, (W - 16) / 2 - 4), y = 52, th = lobby ? 30 : 32, rx = lobby ? W - pad : W - 6;
     if (lobby) B.text(c, T('Happy Beans (virtual): {0}', this.beans), pad + 2, y + th / 2 + 1, 12, '#ffe58a', true, 'left', W - 2 * pad - 2 * tw - 14);
     [[rx - 2 * tw - 6, Sound.sfxOn, 'Sound: On', 'Sound: Off', function () { Sound.toggleSfx(); }], [rx - tw, Sound.musicOn, 'Music: On', 'Music: Off', function () { Sound.toggleMusic(); }]].forEach(function (t) {
       var pw = lobby ? 34 : 42, ph = lobby ? 18 : 22;
-      B.text(c, t[1] ? t[2] : t[3], t[0] + 2, y + th / 2, lobby ? 11 : 13, '#f0dca0', true, 'left', tw - pw - 8);
+      B.text(c, t[1] ? t[2] : t[3], t[0] + 2, y + th / 2, lobby ? 11 : 13, isDdz ? '#ffffff' : '#f0dca0', true, 'left', tw - pw - 8);
       Lux.pill(c, t[0] + tw - pw - 2, y + (th - ph) / 2, pw, ph, t[1]);
       self.hits.push({ x: t[0], y: y, w: tw, h: th, cb: t[4], click: false, label: T(t[1] ? t[2] : t[3]) });
     });
