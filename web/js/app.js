@@ -710,7 +710,9 @@
     this.header(T(info.name) + (g.mode === 'ai' ? T(' · vs Computer ({0})', T(LEVELS[g.level - 1])) : T(' · Room {0}', g.code)), function () { self.leaveGame(); });
     var rect = this.boardRect();
     CB[g.game].draw(c, rect, g, this);
-    var y = H - 112; c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112);
+    var y = H - 112;
+    // 腾讯斗地主风格: 底部透明, 蓝天延续
+    if (!(this.cur && this.cur.id === 'doudizhu')) { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112); }
     B.text(c, this.multiStatus(), W / 2, y + 20, 16, '#eafff0', true, 'center', W - 12);
     var sub = this.multiSub(); if (sub) B.text(c, sub, W / 2, y + 44, 13, '#cfe8d5', false, 'center', W - 12);
     var mine = g.mode === 'online' ? g.players && g.players[g.seat - 1] : null, autoOn = g.mode === 'ai' ? g.auto : !!(mine && mine.auto);
