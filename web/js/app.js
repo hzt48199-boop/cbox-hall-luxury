@@ -566,7 +566,10 @@
     var dg = g; if (g.game === 'luzhanqi' && g.mode === 'ai') { dg = Object.assign({}, g, { state: Luz.view(g.state, g.seat) }); } // local games also draw only your own view (no leaking of enemy pieces)
     B[g.game].draw(c, this.boardRect(), dg);
     // 底部状态
-    var y = H - 112; c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112);
+    var y = H - 112;
+    // 腾讯斗地主风格: 底部面板透明, 蓝天背景延续
+    if (g.game === 'doudizhu') { /* 不画深色底, 蓝天直接延续 */ }
+    else { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112); }
     var line = this.statusText(); this.fitText(line, W / 2, y + 20, 17, '#eafff0', true, W - 16);
     var sub = this.subText(); if (sub) this.fitText(sub, W / 2, y + 44, 13, '#cfe8d5', false, W - 16);
     if (g.game === 'luzhanqi' && g.setup && s.phase === 'setup') {
@@ -698,7 +701,7 @@
     var mine = g.mode === 'online' ? g.players && g.players[g.seat - 1] : null, autoOn = g.mode === 'ai' ? g.auto : !!(mine && mine.auto);
     if (!s.over) this.btn(W / 2 - 60, y + 62, 120, 38, autoOn ? 'Cancel Auto-play' : 'Auto-play', function () {
       if (g.mode === 'ai') { g.auto = !g.auto; self.scheduleMulti(); } else self.net.send({ t: autoOn ? 'back' : 'resign' });
-    }, { color: autoOn ? '#2e7d32' : '#546e7a', size: 16 });
+    }, g.game === 'doudizhu' ? { color: autoOn ? '#1976d2' : '#f57c00', size: 16 } : { color: autoOn ? '#2e7d32' : '#546e7a', size: 16 });
     // 操作按钮
     if (g.game === 'zhajinhua') { if (!s.over && !autoOn) this.zjhButtons(rect); }
     else if (g.game === 'holdem') { if (!s.over && !autoOn) this.holdemButtons(rect); }
@@ -711,7 +714,7 @@
     if (g.game === 'doudizhu') {
       y = rect.y + rect.h - (W >= 700 && window.GH && GH.LuxCards ? 86 : 66) - 10 - 62;
       if (s.phase === 'bid') {
-        [0, 1, 2, 3].forEach(function (b) { list.push({ t: b === 0 ? 'No Bid' : T('{0} pts', b), dis: b !== 0 && b <= s.bid.high, color: b === 0 ? '#546e7a' : '#ef6c00', cb: function () { self.sendMulti({ bid: b }); } }); });
+        [0, 1, 2, 3].forEach(function (b) { list.push({ t: b === 0 ? 'No Bid' : T('{0} pts', b), dis: b !== 0 && b <= s.bid.high, color: b === 0 ? '#1976d2' : '#f57c00', cb: function () { self.sendMulti({ bid: b }); } }); });
       } else {
         list.push({ t: 'Pass', dis: !s.last, color: '#546e7a', cb: function () { self.sendMulti({ pass: true }); } });
         list.push({ t: 'Hint', color: '#1565c0', cb: function () { self.hint(); } });
