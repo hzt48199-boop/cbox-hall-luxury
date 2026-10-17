@@ -94,6 +94,18 @@
     for (i = 0; i < tiles.length; i++) drawTile(ctx, x + i * (w + 1), y, w, h, tiles[i], { back: m.type === 'ankong' && (i === 0 || i === 3) });
     return tiles.length * (w + 1) + 4;
   }
+  /* 豪华座位面板: 深色玻璃底 + 金色发丝边框; 行动回合加金色光晕 */
+  function luxPanel(ctx, x, y, w, h, r, active) {
+    if (typeof Lux !== 'undefined' && Lux.plate) Lux.plate(ctx, x, y, w, h, r);
+    else { rrect(ctx, x, y, w, h, r); ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill(); }
+    if (active) {
+      ctx.save(); ctx.shadowColor = 'rgba(255,200,60,0.65)'; ctx.shadowBlur = 16;
+      if (typeof Lux !== 'undefined' && Lux.goldRing) Lux.goldRing(ctx, x, y, w, h, r, 2.5);
+      else { rrect(ctx, x, y, w, h, r); ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2.5; ctx.stroke(); }
+      ctx.restore();
+      rrect(ctx, x, y, w, h, r); ctx.fillStyle = 'rgba(255,214,0,0.10)'; ctx.fill();
+    }
+  }
   var mahjong = {
     wind: function (s, p) { return T(['East', 'South', 'West', 'North'][(p - s.dealer + 4) % 4]); },
     draw: function (ctx, rect, g, app) {
@@ -103,7 +115,7 @@
       var wide = W >= 700, y = rect.y + 2, bh = LC ? (wide ? 88 : 80) : (wide ? 84 : 74), tw = LC ? (wide ? 20 : 15) : (wide ? 20 : 15), th = LC ? (wide ? 29 : 22) : (wide ? 28 : 21), rw = LC ? tw * 0.85 : 12, rh = LC ? th - 4 : 17;
       order.forEach(function (p) {
         var act = s.turn === p && !s.over;
-        rrect(ctx, 6, y, W - 12, bh, 8); ctx.fillStyle = act ? 'rgba(255,214,0,0.18)' : 'rgba(0,0,0,0.22)'; ctx.fill(); if (act) { ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke(); }
+        luxPanel(ctx, 6, y, W - 12, bh, 8, act);
         var rel = T(p === me % 4 + 1 ? 'next' : p === (me + 2) % 4 + 1 ? 'previous' : 'across');
         text(ctx, self.wind(s, p) + ' ' + T(names[p] || T('Player {0}', p)) + ' (' + rel + ')' + (p === s.dealer ? T(' · dealer') : ''), 14, y + 11, 12, act ? '#ffd600' : '#cfe8d5', true, 'left');
         // 手牌数 / 亮牌
@@ -120,7 +132,7 @@
       });
       // 我的牌河与副露
       var ds2 = s.discards[me], per2 = Math.floor((W - 28) / (tw + 1)), act2 = s.turn === me && !s.over;
-      rrect(ctx, 6, y, W - 12, LC ? 68 : 64, 8); ctx.fillStyle = act2 ? 'rgba(255,214,0,0.18)' : 'rgba(0,0,0,0.22)'; ctx.fill(); if (act2) { ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke(); }
+      luxPanel(ctx, 6, y, W - 12, LC ? 68 : 64, 8, act2);
       text(ctx, self.wind(s, me) + ' ' + T(names[me] || 'Me') + (me === s.dealer ? T(' · dealer') : '') + '  ' + T('Wall {0}', Math.max(0, s.wallCount - 14)), 14, y + 11, 12, act2 ? '#ffd600' : '#cfe8d5', true, 'left');
       ds2.forEach(function (t, i) { drawTile(ctx, 14 + (i % per2) * (tw + 1), y + 20 + Math.floor(i / per2) * (th - 2), tw, th - 3, t, { hl: s.lastDiscard && s.lastDiscard.seat === me && i === ds2.length - 1 && !s.over }); });
       y += LC ? 72 : 68;
