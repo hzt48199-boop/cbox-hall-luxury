@@ -412,7 +412,7 @@
       /* ---------- 腾讯风格: 青蓝绒面铺满全屏 (无木框无缝) ---------- */
       var fx = 0, fy = top, fw = W, fh = tableH;
       var fg = ctx.createRadialGradient(W/2, fy + fh*0.45, 20, W/2, fy + fh*0.5, Math.max(fw, fh)*0.75);
-      fg.addColorStop(0, '#2eb5a0'); fg.addColorStop(0.55, '#1e9a88'); fg.addColorStop(1, '#147a6c');
+      fg.addColorStop(0, '#1a7a3c'); fg.addColorStop(0.55, '#146631'); fg.addColorStop(1, '#0d4d26');
       ctx.fillStyle = fg; ctx.fillRect(fx, fy, fw, fh); // 直角铺满, 无圆角露底
       // 绒面暗纹
       ctx.save(); ctx.rect(fx, fy, fw, fh); ctx.clip(); ctx.globalAlpha = 0.06;
