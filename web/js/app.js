@@ -485,6 +485,7 @@
   /* ---------- 游戏控制器 ---------- */
   P.newGameCtl = function (game, mode, seat) { return { game: game, mode: mode, seat: seat, state: null, sel: null, legal: [], level: 2, setup: null, overShown: false, players: null, status: 'playing' }; };
   P.startLocal = function (game, level, seat) {
+    if (game === 'doudizhu') { try { window.location.href = 'doudizhu-online.html'; } catch (e) {} return; }
     if (E.SEATS[game] > 2) return this.startLocalMulti(game, level);
     var eng = E[game], g = this.newGameCtl(game, 'ai', seat); g.level = level; g.aiSeat = 3 - seat; g.state = eng.newGame();
     if (game === 'luzhanqi') { Luz.setup(g.state, g.aiSeat, Luz.randomLayout()); g.setup = { layout: Luz.randomLayout(), sel: null, done: false }; }
@@ -652,6 +653,7 @@
 
   /* ================= 斗地主 / 麻将(3、4 人,电脑补位)================= */
   P.startLocalMulti = function (game, level, n) {
+    if (game === 'doudizhu') { try { window.location.href = 'doudizhu-online.html'; } catch (e) {} return; }
     var eng = E[game], info = this.gameInfo(game), g = this.newGameCtl(game, 'ai', 1);
     if (game === 'zhajinhua' || game === 'holdem') { n = Math.max(2, Math.min(6, n || this.diff.n || 5)); g.n = n; }
     var prevG = this.g;
