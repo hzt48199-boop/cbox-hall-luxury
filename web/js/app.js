@@ -145,7 +145,13 @@
   P.header = function (title, back) {
     var c = this.ctx, W = this.W, lobby = this.scene === 'lobby', self = this;
     var isDdz = this.cur && this.cur.id === 'doudizhu' && !lobby;
-    if (isDdz) {
+    var isMj = this.cur && this.cur.id === 'mahjong' && !lobby;
+    if (isMj) {
+      // 麻将: 青蓝绒面标题栏 (与牌桌统一)
+      var mg = c.createRadialGradient(W/2, 45, 10, W/2, 47, Math.max(W, 94)*0.7);
+      mg.addColorStop(0, '#2eb5a0'); mg.addColorStop(0.55, '#1e9a88'); mg.addColorStop(1, '#147a6c');
+      c.fillStyle = mg; c.fillRect(0, 0, W, 94);
+    } else if (isDdz) {
       // 腾讯斗地主风格: 蓝天渐变标题栏
       var hg = c.createLinearGradient(0, 0, 0, 94);
       hg.addColorStop(0, '#5eb8f0'); hg.addColorStop(1, '#3a9ae0');
@@ -168,15 +174,15 @@
       this.btn(W - pad - lw, 10, lw, 32, lang, function () { this.toggleLang(); }.bind(this), { color: '#ff8f00', size: 14, label: lang });
       this.btn(W - pad - lw - 6 - bw, 10, bw, 32, '← Back to website', function () { try { if (typeof window !== 'undefined' && window.location) window.location.href = WEBSITE_URL; } catch (e) { /* non-web platform */ } }, { color: '#546e7a', size: 12 });
     } else {
-      this.brandLine(11, true); B.text(c, title, W / 2, 31, 18, isDdz ? '#ffffff' : '#f6e3a1', 'serif', 'center', W - 156);
-      if (back) this.btn(8, 8, 64, 32, 'Back', back, isDdz ? { color: '#1976d2', size: 15 } : { color: '#546e7a', size: 15 });
+      this.brandLine(11, true); B.text(c, title, W / 2, 31, 18, (isDdz || isMj) ? '#ffffff' : '#f6e3a1', 'serif', 'center', W - 156);
+      if (back) this.btn(8, 8, 64, 32, 'Back', back, isDdz ? { color: '#1976d2', size: 15 } : isMj ? { color: '#147a6c', size: 15 } : { color: '#546e7a', size: 15 });
     }
     // sound / music toggles (visible on every screen)
     var tw = lobby ? 92 : Math.min(150, (W - 16) / 2 - 4), y = 52, th = lobby ? 30 : 32, rx = lobby ? W - pad : W - 6;
     if (lobby) B.text(c, T('Happy Beans (virtual): {0}', this.beans), pad + 2, y + th / 2 + 1, 12, '#ffe58a', true, 'left', W - 2 * pad - 2 * tw - 14);
     [[rx - 2 * tw - 6, Sound.sfxOn, 'Sound: On', 'Sound: Off', function () { Sound.toggleSfx(); }], [rx - tw, Sound.musicOn, 'Music: On', 'Music: Off', function () { Sound.toggleMusic(); }]].forEach(function (t) {
       var pw = lobby ? 34 : 42, ph = lobby ? 18 : 22;
-      B.text(c, t[1] ? t[2] : t[3], t[0] + 2, y + th / 2, lobby ? 11 : 13, isDdz ? '#ffffff' : '#f0dca0', true, 'left', tw - pw - 8);
+      B.text(c, t[1] ? t[2] : t[3], t[0] + 2, y + th / 2, lobby ? 11 : 13, (isDdz || isMj) ? '#ffffff' : '#f0dca0', true, 'left', tw - pw - 8);
       Lux.pill(c, t[0] + tw - pw - 2, y + (th - ph) / 2, pw, ph, t[1]);
       self.hits.push({ x: t[0], y: y, w: tw, h: th, cb: t[4], click: false, label: T(t[1] ? t[2] : t[3]) });
     });
@@ -583,7 +589,7 @@
     // 底部状态
     var y = H - 112;
     // 腾讯斗地主风格: 底部面板透明, 蓝天背景延续
-    if (g.game === 'doudizhu') { /* 不画深色底, 蓝天直接延续 */ }
+    if (g.game === 'doudizhu' || g.game === 'mahjong') { /* 不画深色底, 背景直接延续 */ }
     else { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112); }
     var line = this.statusText(); this.fitText(line, W / 2, y + 20, 17, '#eafff0', true, W - 16);
     var sub = this.subText(); if (sub) this.fitText(sub, W / 2, y + 44, 13, '#cfe8d5', false, W - 16);
@@ -712,7 +718,7 @@
     CB[g.game].draw(c, rect, g, this);
     var y = H - 112;
     // 腾讯斗地主风格: 底部透明, 蓝天延续
-    if (!(this.cur && this.cur.id === 'doudizhu')) { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112); }
+    if (!(this.cur && (this.cur.id === 'doudizhu' || this.cur.id === 'mahjong'))) { c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, y, W, 112); }
     B.text(c, this.multiStatus(), W / 2, y + 20, 16, '#eafff0', true, 'center', W - 12);
     var sub = this.multiSub(); if (sub) B.text(c, sub, W / 2, y + 44, 13, '#cfe8d5', false, 'center', W - 12);
     var mine = g.mode === 'online' ? g.players && g.players[g.seat - 1] : null, autoOn = g.mode === 'ai' ? g.auto : !!(mine && mine.auto);
