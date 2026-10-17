@@ -144,7 +144,7 @@
   };
   P.header = function (title, back) {
     var c = this.ctx, W = this.W, lobby = this.scene === 'lobby', self = this;
-    var isDdz = this.cur && this.cur.game === 'doudizhu' && !lobby;
+    var isDdz = this.cur && this.cur.id === 'doudizhu' && !lobby;
     if (isDdz) {
       // 腾讯斗地主风格: 蓝天渐变标题栏
       var hg = c.createLinearGradient(0, 0, 0, 94);
