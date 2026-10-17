@@ -121,6 +121,37 @@
       rrect(ctx, ix, iy, iw, ih, ir); ctx.fillStyle = 'rgba(255,214,0,0.12)'; ctx.fill();
     }
   }
+
+  var FONT_FACE = '"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
+  /* 玩家头像圈: 金色圆环 + 深色底 + 单字 */
+  function avatar(ctx, cx, cy, r, ch, active) {
+    ctx.save();
+    if (active) { ctx.shadowColor = 'rgba(255,200,60,0.7)'; ctx.shadowBlur = 10; }
+    var g = ctx.createRadialGradient(cx - r * .3, cy - r * .3, 1, cx, cy, r);
+    g.addColorStop(0, '#3a4a3f'); g.addColorStop(1, '#16211b');
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.3); ctx.fillStyle = g; ctx.fill();
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.3);
+    ctx.strokeStyle = active ? '#ffd600' : '#c9a84c'; ctx.lineWidth = active ? 2.5 : 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, r - 3, 0, 6.3); ctx.strokeStyle = 'rgba(201,168,76,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = active ? '#ffd600' : '#e8d48a'; ctx.font = 'bold ' + Math.round(r * 1.1) + 'px ' + FONT_FACE;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ch, cx, cy + 1);
+  }
+
+  /* 中央金色徽标: 双圆环 + 麻将字符 */
+  function centerEmblem(ctx, cx, cy, r) {
+    ctx.save(); ctx.globalAlpha = 0.55;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.3); ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, r - 6, 0, 6.3); ctx.strokeStyle = 'rgba(201,168,76,0.6)'; ctx.lineWidth = 1; ctx.stroke();
+    // 四角小饰
+    for (var i = 0; i < 4; i++) {
+      var a = i * Math.PI / 2 + Math.PI / 4, sx = cx + Math.cos(a) * r, sy = cy + Math.sin(a) * r;
+      ctx.beginPath(); ctx.arc(sx, sy, 3, 0, 6.3); ctx.fillStyle = '#c9a84c'; ctx.fill();
+    }
+    ctx.fillStyle = '#d4b86a'; ctx.font = 'bold ' + Math.round(r * 0.9) + 'px ' + FONT_FACE;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('麻', cx, cy + 2);
+    ctx.restore();
+  }
   var mahjong = {
     wind: function (s, p) { return T(['East', 'South', 'West', 'North'][(p - s.dealer + 4) % 4]); },
     draw: function (ctx, rect, g, app) {
@@ -132,7 +163,9 @@
         var act = s.turn === p && !s.over;
         luxPanel(ctx, 6, y, W - 12, bh, 8, act);
         var rel = T(p === me % 4 + 1 ? 'next' : p === (me + 2) % 4 + 1 ? 'previous' : 'across');
-        text(ctx, self.wind(s, p) + ' ' + T(names[p] || T('Player {0}', p)) + ' (' + rel + ')' + (p === s.dealer ? T(' · dealer') : ''), 14, y + 11, 12, act ? '#ffd600' : '#cfe8d5', true, 'left');
+        var nm = names[p] || T('Player {0}', p);
+        avatar(ctx, 26, y + 16, 12, (self.wind(s, p) || '?').charAt(0), act);
+        text(ctx, self.wind(s, p) + ' ' + T(nm) + ' (' + rel + ')' + (p === s.dealer ? T(' · dealer') : ''), 44, y + 11, 12, act ? '#ffd600' : '#cfe8d5', true, 'left');
         // 手牌数 / 亮牌
         var mx = W - 12;
         if (s.over && s.hands[p]) { var hh = s.hands[p]; hh.forEach(function (t, i) { drawTile(ctx, 14 + i * (rw + 1), y + 19, rw, rh, t, {}); }); }
@@ -173,6 +206,9 @@
       });
       hy += two ? hh2 + 6 : 0;
       g.handBottom = hy + hh2;
+      // 中央金色徽标 (手牌下方空白处)
+      var ey = hy + hh2 + 90;
+      if (ey < rect.y + rect.h - 60) centerEmblem(ctx, W / 2, ey, 34);
     },
     tapTile: function (g, t, app) {
       var s = g.vs; if (s.over) return;
