@@ -29,46 +29,200 @@
   function drawCards(ctx, cards, x, y, cw, ch, step, o) { for (var i = 0; i < cards.length; i++) drawCard(ctx, x + i * step, y, cw, ch, cards[i], o); }
 
   /* ================= 斗地主 ================= */
+  var FONT_FACE = '"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
   var doudizhu = {
     // g.vs 为"我"的视角状态;g.sel 为选中牌集合(对象 id→true)
     draw: function (ctx, rect, g, app) {
-      var s = g.vs, me = g.seat, W = app.W, right = me % 3 + 1, left = (me + 1) % 3 + 1, names = g.names || {};
+      var s = g.vs, me = g.seat, W = app.W, H = app.H, names = g.names || {};
       var self = this, hand = s.hands[me] || [], n = hand.length;
-      // 对手信息框
-      [[left, 8, false], [right, W - 8 - 118, true]].forEach(function (q) {
-        var p = q[0], x = q[1], y = rect.y + 6, act = s.turn === p && !s.over;
-        rrect(ctx, x, y, 118, 66, 10); ctx.fillStyle = act ? 'rgba(255,214,0,0.25)' : 'rgba(0,0,0,0.3)'; ctx.fill(); ctx.strokeStyle = act ? '#ffd600' : 'rgba(255,255,255,0.3)'; ctx.lineWidth = act ? 3 : 1; ctx.stroke();
-        text(ctx, T(names[p] || T('Player {0}', p)), x + 59, y + 14, 13, '#fff', true);
-        var role = s.landlord ? (p === s.landlord ? 'Landlord' : 'Farmer') : (s.bid && s.bid.bids[p] !== null && s.bid.bids[p] !== undefined ? (s.bid.bids[p] ? T('Bid {0}', s.bid.bids[p]) : 'No Bid') : '');
-        text(ctx, role, x + 59, y + 32, 13, s.landlord && p === s.landlord ? '#ffd54f' : '#cfe8d5', true);
-        drawCard(ctx, x + 14, y + 40, 18, 22, 0, { back: true }); text(ctx, '× ' + (s.counts[p] === undefined ? 0 : s.counts[p]), x + 62, y + 52, 15, '#fff', true);
-        // 最近一手
-        var lp = g.lastBy && g.lastBy[p], cx = q[2] ? W - 8 : 8;
+      var top = rect.y, tableH = rect.h;
+
+      /* ---------- 腾讯欢乐斗地主风格: 蓝天渐变背景 ---------- */
+      var bg = ctx.createLinearGradient(0, top, 0, top + tableH);
+      bg.addColorStop(0, '#5eb8f0'); bg.addColorStop(0.5, '#3a9ae0'); bg.addColorStop(1, '#1e7ac8');
+      ctx.fillStyle = bg; ctx.fillRect(0, top, W, tableH);
+      // 云朵装饰
+      ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = '#fff';
+      for (var ci = 0; ci < 5; ci++) {
+        var cx = (ci * 197) % W, cy = top + 40 + (ci * 89) % 120;
+        ctx.beginPath(); ctx.arc(cx, cy, 28, 0, 6.3); ctx.arc(cx + 28, cy - 8, 22, 0, 6.3); ctx.arc(cx + 56, cy, 26, 0, 6.3); ctx.fill();
+      }
+      ctx.restore();
+
+      var right = me % 3 + 1, left = (me + 1) % 3 + 1;
+
+      /* ---------- 腾讯风格头像 (左右两侧) ---------- */
+      function txAvatar(px, py, p, isLeft) {
+        var nm = names[p] || T('Player {0}', p);
+        var act = s.turn === p && !s.over;
+        var isLandlord = s.landlord === p;
+        // 头像圆 (腾讯风格: 彩色渐变)
+        ctx.save();
+        if (act) { ctx.shadowColor = 'rgba(255,214,0,0.8)'; ctx.shadowBlur = 14; }
+        ctx.beginPath(); ctx.arc(px, py, 28, 0, 6.3);
+        var ag = ctx.createLinearGradient(px - 28, py - 28, px + 28, py + 28);
+        var cols = [['#ff9a3c', '#ff6b35'], ['#4db8ff', '#1e88e5'], ['#ff6b9d', '#e91e63']];
+        var cc = cols[(p - 1) % 3];
+        ag.addColorStop(0, cc[0]); ag.addColorStop(1, cc[1]);
+        ctx.fillStyle = ag; ctx.fill(); ctx.restore();
+        ctx.beginPath(); ctx.arc(px, py, 28, 0, 6.3);
+        ctx.strokeStyle = act ? '#ffd600' : '#fff'; ctx.lineWidth = act ? 3.5 : 2.5; ctx.stroke();
+        // 地主标识 (小皇冠/斗字)
+        if (isLandlord) {
+          ctx.fillStyle = '#ffd600'; ctx.font = 'bold 14px ' + FONT_FACE;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('地主', px, py - 40);
+        }
+        // 名字
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 13px ' + FONT_FACE;
+        ctx.textAlign = 'center';
+        var dnm = T(nm); if (dnm.length > 6) dnm = dnm.slice(0, 5) + '…';
+        ctx.fillText(dnm, px, py + 44);
+        // 剩余牌数
+        var cnt = s.counts[p] === undefined ? 0 : s.counts[p];
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        rrect(ctx, px - 30, py + 54, 60, 20, 10); ctx.fill();
+        ctx.fillStyle = '#ffd600'; ctx.font = 'bold 12px ' + FONT_FACE;
+        ctx.fillText(cnt + '张', px, py + 64);
+      }
+      txAvatar(52, top + 110, left, true);
+      txAvatar(W - 52, top + 110, right, false);
+
+      /* ---------- 底牌 (顶部中央) ---------- */
+      if (s.bottom && s.bottom.length) {
+        var bkw = 34, bkh = 46, bst = 30, btot = 3 * bkw + 2 * 8;
+        var bsx = (W - btot) / 2, byy = top + 12;
+        // 底牌标题
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; rrect(ctx, W/2 - 40, byy - 2, 80, 18, 9); ctx.fill();
+        ctx.fillStyle = '#ffe9a8'; ctx.font = '11px ' + FONT_FACE; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('底牌', W/2, byy + 7);
+        for (var bi = 0; bi < 3; bi++) {
+          drawCard(ctx, bsx + bi * (bkw + 8), byy + 20, bkw, bkh, s.bottom[bi], {});
+        }
+        // 倍数
+        if (s.phase !== 'bid') {
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 15px ' + FONT_FACE;
+          ctx.fillText('×' + (s.bid.high * s.mult) + '倍', W/2, byy + 20 + bkh + 18);
+        }
+      }
+
+      /* ---------- 对手出的牌 (中央区域) ---------- */
+      [[left, W * 0.28], [right, W * 0.72]].forEach(function (q) {
+        var p = q[0], pcx = q[1], pcy = top + 220;
+        var lp = g.lastBy && g.lastBy[p];
         if (lp) {
-          var cwid = 22, chei = 30, stp = Math.min(13, (W / 2 - 24) / Math.max(1, lp.cards ? lp.cards.length : 1));
-          if (lp.pass) text(ctx, 'Pass', q[2] ? W - 8 - 30 : 8 + 30, y + 92, 16, '#ffcc80', true);
-          else { var total = (lp.cards.length - 1) * stp + cwid, sx = q[2] ? W - 8 - total : 8; drawCards(ctx, lp.cards, sx, y + 76, cwid, chei, stp); if (lp.type === 'bomb' || lp.type === 'rocket') text(ctx, lp.type === 'bomb' ? 'Bomb!' : 'Rocket!', q[2] ? W - 40 : 40, y + 120, 14, '#ff8a65', true); }
+          if (lp.pass) {
+            // 腾讯风格 "不出" 文字牌
+            ctx.save(); ctx.globalAlpha = 0.9;
+            rrect(ctx, pcx - 34, pcy - 18, 68, 36, 18);
+            var pg = ctx.createLinearGradient(0, pcy - 18, 0, pcy + 18);
+            pg.addColorStop(0, '#5eb8f0'); pg.addColorStop(1, '#1e7ac8');
+            ctx.fillStyle = pg; ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 17px ' + FONT_FACE;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('不出', pcx, pcy + 1);
+            ctx.restore();
+          } else if (lp.cards && lp.cards.length) {
+            var cwid = 30, chei = 42, stp = Math.min(20, 200 / Math.max(1, lp.cards.length));
+            var total = (lp.cards.length - 1) * stp + cwid, sx = pcx - total / 2;
+            drawCards(ctx, lp.cards, sx, pcy - chei/2, cwid, chei, stp);
+            if (lp.type === 'bomb' || lp.type === 'rocket') {
+              ctx.fillStyle = '#ff6b35'; ctx.font = 'bold 16px ' + FONT_FACE;
+              ctx.textAlign = 'center';
+              ctx.fillText(lp.type === 'bomb' ? '炸弹!' : '火箭!', pcx, pcy + 44);
+            }
+          }
         }
       });
-      // 底牌
-      if (s.bottom && s.bottom.length) { text(ctx, 'Kitty', W / 2, rect.y + 14, 12, '#cfe8d5', false); drawCards(ctx, s.bottom, W / 2 - 40, rect.y + 24, 24, 32, 28 * 0.9, {}); }
-      // 倍数与底分
-      if (s.phase !== 'bid') text(ctx, T('Multiplier ×{0}', s.bid.high * s.mult), W / 2, rect.y + 70, 13, '#ffeb99', true);
-      // 手牌
-      var wd = W >= 700 && !!LC, cw = wd ? 60 : 46, ch = wd ? 86 : 66, hy = rect.y + rect.h - ch - 10, step = n > 1 ? Math.min(cw * 0.62, (W - 16 - cw) / (n - 1)) : 0, sx = (W - ((n - 1) * step + cw)) / 2;
+
+      /* ---------- 我出的牌 (中央下方) ---------- */
+      var mine = g.lastBy && g.lastBy[me];
+      var handTop = top + tableH - 130;
+      if (mine && !mine.pass && mine.cards && mine.cards.length) {
+        var mst = Math.min(24, (W - 80) / Math.max(1, mine.cards.length));
+        var mtw = (mine.cards.length - 1) * mst + 36;
+        drawCards(ctx, mine.cards, (W - mtw) / 2, handTop - 90, 36, 50, mst);
+      } else if (mine && mine.pass) {
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = 'bold 18px ' + FONT_FACE;
+        ctx.textAlign = 'center'; ctx.fillText('不出', W/2, handTop - 60);
+      }
+
+      /* ---------- 我的手牌 (底部大牌) ---------- */
+      var wd = W >= 700 && !!LC, cw = wd ? 64 : 52, ch = wd ? 92 : 74;
+      var hy = top + tableH - ch - 14;
+      var step = n > 1 ? Math.min(cw * 0.58, (W - 20 - cw) / (n - 1)) : 0;
+      var sx = (W - ((n - 1) * step + cw)) / 2;
       for (var i = 0; i < n; i++) {
         (function (i) {
-          var id = hand[i], sel = g.sel && g.sel[id], x = sx + i * step, y = hy - (sel ? 16 : 0);
+          var id = hand[i], sel = g.sel && g.sel[id], x = sx + i * step, y = hy - (sel ? 20 : 0);
+          // 腾讯风格: 选中牌上浮 + 阴影
+          ctx.save();
+          if (sel) { ctx.shadowColor = 'rgba(255,180,0,0.6)'; ctx.shadowBlur = 10; }
+          else { ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2; }
           drawCard(ctx, x, y, cw, ch, id, { sel: sel });
-          app.hits.push({ x: x, y: hy - 16, w: i === n - 1 ? cw : step, h: ch + 16, click: false, label: 'card' + id, cb: function () { self.toggle(g, id, app); } });
+          ctx.restore();
+          app.hits.push({ x: x, y: hy - 20, w: i === n - 1 ? cw : step, h: ch + 20, click: false, label: 'card' + id, cb: function () { self.toggle(g, id, app); } });
         })(i);
       }
-      // 我最近一手
-      var mine = g.lastBy && g.lastBy[me];
-      if (mine) { if (mine.pass) text(ctx, 'Pass', W / 2, hy - 74, 18, '#ffcc80', true); else { var st2 = Math.min(18, (W - 60) / Math.max(1, mine.cards.length)), tw = (mine.cards.length - 1) * st2 + 26; drawCards(ctx, mine.cards, (W - tw) / 2, hy - 112, 26, 36, st2); } }
-      // 我的身份
-      var myRole = s.landlord ? T(me === s.landlord ? 'Landlord' : 'Farmer') : '';
-      text(ctx, T(names[me] || 'Me') + (myRole ? ' · ' + myRole : ''), 12, hy - 24 - 36 + 20, 13, s.turn === me && !s.over ? '#ffd600' : '#cfe8d5', true, 'left', 220);
+
+      /* ---------- 腾讯风格按钮 ---------- */
+      function txButton(bx, by, bw, bh, label, style) {
+        // style: 'orange' (出牌/叫地主), 'blue' (不出/不叫), 'dark' (其他)
+        var g1, g2;
+        if (style === 'orange') { g1 = '#ffb74d'; g2 = '#f57c00'; }
+        else if (style === 'blue') { g1 = '#64b5f6'; g2 = '#1976d2'; }
+        else { g1 = '#8a8a8a'; g2 = '#5a5a5a'; }
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+        rrect(ctx, bx, by, bw, bh, bh / 2);
+        var bg = ctx.createLinearGradient(0, by, 0, by + bh);
+        bg.addColorStop(0, g1); bg.addColorStop(1, g2);
+        ctx.fillStyle = bg; ctx.fill();
+        ctx.restore();
+        // 高光
+        rrect(ctx, bx + 3, by + 3, bw - 6, bh * 0.42, bh / 3);
+        ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fill();
+        // 描边
+        rrect(ctx, bx, by, bw, bh, bh / 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+        // 文字
+        ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.round(bh * 0.42) + 'px ' + FONT_FACE;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // 文字阴影
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 2; ctx.shadowOffsetY = 1;
+        ctx.fillText(label, bx + bw / 2, by + bh / 2 + 1);
+        ctx.restore();
+        return { x: bx, y: by, w: bw, h: bh };
+      }
+      // 按钮区域 (手牌上方)
+      var btnY = hy - 64, btnW = 110, btnH = 44, btnGap = 16;
+      if (s.phase === 'play' && s.turn === me && !s.over) {
+        // 出牌 / 不出
+        var b1 = txButton(W/2 - btnW - btnGap/2, btnY, btnW, btnH, '不出', 'blue');
+        var b2 = txButton(W/2 + btnGap/2, btnY, btnW, btnH, '出牌', 'orange');
+        app.hits.push({ x: b1.x, y: b1.y, w: b1.w, h: b1.h, label: 'pass', cb: function () { app.sendMulti({ a: 'pass' }); } });
+        app.hits.push({ x: b2.x, y: b2.y, w: b2.w, h: b2.h, label: 'play', cb: function () { var sel = self.selected(g); if (sel.length) app.sendMulti({ a: 'play', cards: sel }); } });
+      } else if (s.phase === 'bid' && s.turn === me && !s.over) {
+        // 叫地主 / 不叫
+        var b3 = txButton(W/2 - btnW - btnGap/2, btnY, btnW, btnH, '不叫', 'blue');
+        var b4 = txButton(W/2 + btnGap/2, btnY, btnW, btnH, '叫地主', 'orange');
+        app.hits.push({ x: b3.x, y: b3.y, w: b3.w, h: b3.h, label: 'bid0', cb: function () { app.sendMulti({ a: 'bid', bid: 0 }); } });
+        app.hits.push({ x: b4.x, y: b4.y, w: b4.w, h: b4.h, label: 'bid1', cb: function () { app.sendMulti({ a: 'bid', bid: 1 }); } });
+      }
+
+      /* ---------- 我的身份与状态 ---------- */
+      var myRole = s.landlord ? (me === s.landlord ? '地主' : '农民') : '';
+      if (myRole) {
+        ctx.fillStyle = me === s.landlord ? '#ffd600' : '#fff';
+        ctx.font = 'bold 14px ' + FONT_FACE; ctx.textAlign = 'left';
+        ctx.fillText(myRole, 14, hy - 30);
+      }
+      // 轮到我时的提示
+      if (s.turn === me && !s.over && s.phase === 'play') {
+        ctx.fillStyle = 'rgba(255,214,0,0.9)'; ctx.font = 'bold 14px ' + FONT_FACE;
+        ctx.textAlign = 'center';
+        ctx.fillText('轮到你出牌', W/2, btnY - 16);
+      }
     },
     toggle: function (g, id, app) { g.sel = g.sel || {}; if (g.sel[id]) delete g.sel[id]; else g.sel[id] = true; app.dirty = true; },
     selected: function (g) { return Object.keys(g.sel || {}).map(Number).filter(function (id) { return g.sel[id]; }); }
