@@ -76,6 +76,61 @@
 
   /* ================= 麻将 ================= */
   var NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九'], SUITCH = ['万', '筒', '条'], NUM_EN = ['1', '2', '3', '4', '5', '6', '7', '8', '9'], SUITCH_EN = ['CHR', 'DOT', 'BAM'], HON_EN = ['E', 'S', 'W', 'N', 'RD', 'GD'], SUITCOL = ['#b71c1c', '#1565c0', '#2e7d32'];
+  /* 筒: 图形圆点布局 (传统点位) */
+  function drawDots(ctx, cx, cy, w, h, n) {
+    var r = Math.min(w, h) * 0.11;
+    function dot(px, py, color, rr) {
+      rr = rr || r;
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, 6.3);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, rr * 0.55, 0, 6.3);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
+    }
+    var blue = '#1a5fb4', red = '#d32f2f', green = '#2e8b57';
+    var ux = w * 0.28, uy = h * 0.26;
+    if (n === 1) {
+      // 大同心圆: 蓝外圈红内圈
+      ctx.beginPath(); ctx.arc(cx, cy, r * 2.2, 0, 6.3); ctx.fillStyle = blue; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.4, 0, 6.3); ctx.fillStyle = red; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.7, 0, 6.3); ctx.fillStyle = '#fff'; ctx.fill();
+    } else if (n === 2) { dot(cx, cy - uy, blue); dot(cx, cy + uy, green); }
+    else if (n === 3) { dot(cx - ux, cy - uy, blue); dot(cx, cy, red); dot(cx + ux, cy + uy, blue); }
+    else if (n === 4) { dot(cx - ux, cy - uy, blue); dot(cx + ux, cy - uy, blue); dot(cx - ux, cy + uy, green); dot(cx + ux, cy + uy, green); }
+    else if (n === 5) { dot(cx - ux, cy - uy, blue); dot(cx + ux, cy - uy, blue); dot(cx, cy, red); dot(cx - ux, cy + uy, green); dot(cx + ux, cy + uy, green); }
+    else if (n === 6) { dot(cx - ux, cy - uy, red); dot(cx + ux, cy - uy, blue); dot(cx - ux, cy, blue); dot(cx + ux, cy, blue); dot(cx - ux, cy + uy, green); dot(cx + ux, cy + uy, green); }
+    else if (n === 7) { dot(cx - ux, cy - uy, red); dot(cx + ux, cy - uy, blue); dot(cx, cy - uy * 0.3, blue); dot(cx - ux, cy + uy * 0.4, blue); dot(cx + ux, cy + uy * 0.4, green); dot(cx - ux * 0.4, cy + uy, green); dot(cx + ux * 0.7, cy + uy, green); }
+    else if (n === 8) { var yy = [-uy, -uy * 0.33, uy * 0.33, uy]; yy.forEach(function (dy, i) { dot(cx - ux, cy + dy, i < 2 ? blue : green); dot(cx + ux, cy + dy, i < 2 ? blue : green); }); }
+    else if (n === 9) { for (var ix = -1; ix <= 1; ix++) for (var iy = -1; iy <= 1; iy++) dot(cx + ix * ux, cy + iy * uy * 0.9, (ix === 0 && iy === 0) ? red : (iy < 0 ? blue : green)); }
+  }
+  /* 条: 图形竹节布局 */
+  function drawBams(ctx, cx, cy, w, h, n) {
+    var bw = Math.min(w, h) * 0.13, bh = bh_ = Math.min(w, h) * 0.30;
+    function bam(px, py, color) {
+      ctx.fillStyle = color;
+      rrect(ctx, px - bw / 2, py - bh / 2, bw, bh, bw * 0.4); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      rrect(ctx, px - bw / 2 + 1, py - bh / 2 + 1, bw * 0.35, bh - 2, bw * 0.2); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px - bw / 2, py); ctx.lineTo(px + bw / 2, py); ctx.stroke();
+    }
+    var green = '#2e8b57', red = '#d32f2f', blue = '#1a5fb4';
+    var ux = w * 0.28, uy = h * 0.24;
+    if (n === 1) {
+      // 大竹: 单根粗竹节 (简化版, 不画鸟)
+      ctx.fillStyle = green; rrect(ctx, cx - bw, cy - bh * 1.2, bw * 2, bh * 2.4, bw * 0.5); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'; rrect(ctx, cx - bw + 2, cy - bh * 1.2 + 2, bw * 0.6, bh * 2.4 - 4, bw * 0.3); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
+      for (var s = -1; s <= 1; s++) { ctx.beginPath(); ctx.moveTo(cx - bw, cy + s * bh * 0.7); ctx.lineTo(cx + bw, cy + s * bh * 0.7); ctx.stroke(); }
+    }
+    else if (n === 2) { bam(cx, cy - uy, green); bam(cx, cy + uy, blue); }
+    else if (n === 3) { bam(cx - ux, cy - uy, green); bam(cx, cy, red); bam(cx + ux, cy + uy, green); }
+    else if (n === 4) { bam(cx - ux, cy - uy, green); bam(cx + ux, cy - uy, green); bam(cx - ux, cy + uy, blue); bam(cx + ux, cy + uy, blue); }
+    else if (n === 5) { bam(cx - ux, cy - uy, green); bam(cx + ux, cy - uy, green); bam(cx, cy, red); bam(cx - ux, cy + uy, blue); bam(cx + ux, cy + uy, blue); }
+    else if (n === 6) { bam(cx - ux, cy - uy, green); bam(cx + ux, cy - uy, green); bam(cx - ux, cy, green); bam(cx + ux, cy, red); bam(cx - ux, cy + uy, blue); bam(cx + ux, cy + uy, blue); }
+    else if (n === 7) { bam(cx - ux, cy - uy, green); bam(cx + ux, cy - uy, green); bam(cx, cy - uy * 0.3, red); bam(cx - ux, cy + uy * 0.4, green); bam(cx + ux, cy + uy * 0.4, blue); bam(cx - ux * 0.4, cy + uy, blue); bam(cx + ux * 0.7, cy + uy, blue); }
+    else if (n === 8) { var yy2 = [-uy, -uy * 0.33, uy * 0.33, uy]; yy2.forEach(function (dy, i) { bam(cx - ux, cy + dy, i === 1 ? red : green); bam(cx + ux, cy + dy, i === 1 ? red : blue); }); }
+    else if (n === 9) { for (var jx = -1; jx <= 1; jx++) for (var jy = -1; jy <= 1; jy++) bam(cx + jx * ux, cy + jy * uy * 0.9, (jx === 0 && jy === 0) ? red : green); }
+  }
   function drawTile(ctx, x, y, w, h, k, o) {
     o = o || {};
     // 腾讯风格 3D 麻将牌: 厚度边 + 暖白牌面
@@ -113,16 +168,22 @@
     ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
     if (o.back) return;
     // 牌面字符
+    var faceH = h - dep * 0.3, cy = y + faceH / 2, cxx = x + w / 2;
     var fs = Math.max(8, w * 0.52);
     var en = typeof I !== 'undefined' && I.lang !== 'zh';
-    var cy = y + (h - dep * 0.3) / 2;
-    if (k < 27) {
-      var su = Math.floor(k / 9);
-      text(ctx, (en ? NUM_EN : NUM)[k % 9], x + w / 2, y + (h - dep * 0.3) * 0.32, fs, '#1a1a1a', true);
-      text(ctx, (en ? SUITCH_EN : SUITCH)[su], x + w / 2, y + (h - dep * 0.3) * 0.70, en ? fs * 0.5 : fs * 0.88, SUITCOL[su], true);
+    if (k < 9) {
+      // 万: 数字 + 萬 (传统文字牌)
+      text(ctx, (en ? NUM_EN : NUM)[k % 9], cxx, y + faceH * 0.32, fs, '#1a1a1a', true);
+      text(ctx, en ? 'WAN' : '萬', cxx, y + faceH * 0.70, fs * 0.88, '#d32f2f', true);
+    } else if (k < 18) {
+      // 筒: 图形圆点
+      drawDots(ctx, cxx, cy, w * 0.86, faceH * 0.86, k - 9 + 1);
+    } else if (k < 27) {
+      // 条: 图形竹节
+      drawBams(ctx, cxx, cy, w * 0.86, faceH * 0.86, k - 18 + 1);
     }
-    else if (k === 33) { rrect(ctx, x + w * 0.22, y + (h - dep * 0.3) * 0.2, w * 0.56, (h - dep * 0.3) * 0.6, 2); ctx.strokeStyle = '#1565c0'; ctx.lineWidth = Math.max(1.5, w * 0.08); ctx.stroke(); }
-    else text(ctx, en ? HON_EN[k - 27] : T(M.KN[k]), x + w / 2, cy, en ? fs * 0.9 : fs * 1.15, k === 31 ? '#d32f2f' : k === 32 ? '#2e8b47' : '#1a1a1a', true);
+    else if (k === 33) { rrect(ctx, x + w * 0.22, y + faceH * 0.2, w * 0.56, faceH * 0.6, 2); ctx.strokeStyle = '#1565c0'; ctx.lineWidth = Math.max(1.5, w * 0.08); ctx.stroke(); }
+    else text(ctx, en ? HON_EN[k - 27] : T(M.KN[k]), cxx, cy, en ? fs * 0.9 : fs * 1.15, k === 31 ? '#d32f2f' : k === 32 ? '#2e8b47' : '#1a1a1a', true);
   }
   function drawMeld(ctx, m, x, y, w, h) { // 返回占用宽度
     var tiles = m.tiles.slice(0, 4), i;
