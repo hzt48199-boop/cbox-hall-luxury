@@ -94,16 +94,31 @@
     for (i = 0; i < tiles.length; i++) drawTile(ctx, x + i * (w + 1), y, w, h, tiles[i], { back: m.type === 'ankong' && (i === 0 || i === 3) });
     return tiles.length * (w + 1) + 4;
   }
-  /* 豪华座位面板: 深色玻璃底 + 金色发丝边框; 行动回合加金色光晕 */
+  /* 豪华座位面板 v2: 胡桃木外框 + 金色饰边 + 绿绒内衬; 行动回合加金色光晕 */
   function luxPanel(ctx, x, y, w, h, r, active) {
-    if (typeof Lux !== 'undefined' && Lux.plate) Lux.plate(ctx, x, y, w, h, r);
-    else { rrect(ctx, x, y, w, h, r); ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill(); }
+    var hasLux = typeof Lux !== 'undefined';
+    // 木框
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+    if (hasLux && Lux.wood) Lux.wood(ctx, x, y, w, h, r);
+    else { rrect(ctx, x, y, w, h, r); ctx.fillStyle = '#4a2c16'; ctx.fill(); }
+    ctx.restore();
+    // 金色饰边
+    if (hasLux && Lux.goldRing) Lux.goldRing(ctx, x + 2.5, y + 2.5, w - 5, h - 5, Math.max(2, r - 2), 2);
+    else { rrect(ctx, x + 2.5, y + 2.5, w - 5, h - 5, Math.max(2, r - 2)); ctx.strokeStyle = '#e6c35c'; ctx.lineWidth = 2; ctx.stroke(); }
+    // 绿绒内衬
+    var ix = x + 8, iy = y + 8, iw = w - 16, ih = h - 16, ir = Math.max(2, r - 6);
+    rrect(ctx, ix, iy, iw, ih, ir);
+    var g = ctx.createLinearGradient(0, iy, 0, iy + ih);
+    g.addColorStop(0, '#16452c'); g.addColorStop(0.55, '#0e3320'); g.addColorStop(1, '#072015');
+    ctx.fillStyle = g; ctx.fill();
+    // 内衬上缘高光
+    rrect(ctx, ix, iy, iw, ih, ir); ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
     if (active) {
-      ctx.save(); ctx.shadowColor = 'rgba(255,200,60,0.65)'; ctx.shadowBlur = 16;
-      if (typeof Lux !== 'undefined' && Lux.goldRing) Lux.goldRing(ctx, x, y, w, h, r, 2.5);
-      else { rrect(ctx, x, y, w, h, r); ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2.5; ctx.stroke(); }
+      ctx.save(); ctx.shadowColor = 'rgba(255,200,60,0.8)'; ctx.shadowBlur = 20;
+      if (hasLux && Lux.goldRing) Lux.goldRing(ctx, x, y, w, h, r, 3);
+      else { rrect(ctx, x, y, w, h, r); ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 3; ctx.stroke(); }
       ctx.restore();
-      rrect(ctx, x, y, w, h, r); ctx.fillStyle = 'rgba(255,214,0,0.10)'; ctx.fill();
+      rrect(ctx, ix, iy, iw, ih, ir); ctx.fillStyle = 'rgba(255,214,0,0.12)'; ctx.fill();
     }
   }
   var mahjong = {
