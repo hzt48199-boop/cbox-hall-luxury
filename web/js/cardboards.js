@@ -154,61 +154,162 @@
   }
   var mahjong = {
     wind: function (s, p) { return T(['East', 'South', 'West', 'North'][(p - s.dealer + 4) % 4]); },
+    windChar: function (s, p) { return ['东', '南', '西', '北'][(p - s.dealer + 4) % 4]; },
     draw: function (ctx, rect, g, app) {
-      var s = g.vs, me = g.seat, W = app.W, names = g.names || {}, self = this, order = [(me + 1) % 4 + 1, (me + 2) % 4 + 1, (me + 3) % 4 + 1, me];
-      // 实际顺序: 上家(左) 对家 下家(右) 我 → 自上而下排列为 下家、对家、上家、我 以便阅读
-      order = [me % 4 + 1, (me + 1) % 4 + 1, (me + 2) % 4 + 1];
-      var wide = W >= 700, y = rect.y + 2, bh = LC ? (wide ? 88 : 80) : (wide ? 84 : 74), tw = LC ? (wide ? 20 : 15) : (wide ? 20 : 15), th = LC ? (wide ? 29 : 22) : (wide ? 28 : 21), rw = LC ? tw * 0.85 : 12, rh = LC ? th - 4 : 17;
-      order.forEach(function (p) {
+      var s = g.vs, me = g.seat, W = app.W, H = app.H, names = g.names || {}, self = this;
+      var top = rect.y, tableH = rect.h;
+
+      /* ---------- 腾讯风格: 青蓝色绒面牌桌 ---------- */
+      // 木框
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
+      if (typeof Lux !== 'undefined' && Lux.wood) Lux.wood(ctx, 4, top + 4, W - 8, tableH - 8, 18);
+      ctx.restore();
+      // 青蓝绒面 (腾讯欢乐麻将标志性颜色)
+      var fx = 18, fy = top + 18, fw = W - 36, fh = tableH - 36;
+      rrect(ctx, fx, fy, fw, fh, 12);
+      var fg = ctx.createRadialGradient(W/2, fy + fh*0.45, 20, W/2, fy + fh*0.5, Math.max(fw, fh)*0.75);
+      fg.addColorStop(0, '#2eb5a0'); fg.addColorStop(0.55, '#1e9a88'); fg.addColorStop(1, '#147a6c');
+      ctx.fillStyle = fg; ctx.fill();
+      // 绒面暗纹
+      ctx.save(); rrect(ctx, fx, fy, fw, fh, 12); ctx.clip(); ctx.globalAlpha = 0.06;
+      for (var pi = 0; pi < 40; pi++) {
+        ctx.beginPath(); ctx.arc(fx + (pi*97 % fw), fy + (pi*57 % fh), 30 + (pi*13 % 40), 0, 6.3);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+      }
+      ctx.restore();
+
+      /* ---------- 座位布局 (相对视角) ---------- */
+      // 下家在我右手, 对家在对面, 上家在我左手
+      var pRight = me % 4 + 1, pAcross = (me + 1) % 4 + 1, pLeft = (me + 2) % 4 + 1;
+      var cx = W / 2, cy = fy + fh * 0.42;
+
+      /* ---------- 中央骰子盒 (腾讯标志性) ---------- */
+      var boxS = 86, bx = cx - boxS/2, by = cy - boxS/2;
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+      rrect(ctx, bx, by, boxS, boxS, 8); ctx.fillStyle = '#1a1a1a'; ctx.fill(); ctx.restore();
+      rrect(ctx, bx, by, boxS, boxS, 8); ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = 2.5; ctx.stroke();
+      // 四角风向
+      var winds = ['东', '南', '西', '北'], wpos = [[cx, by+12], [bx+boxS-12, cy], [cx, by+boxS-12], [bx+12, cy]];
+      // 当前行动玩家方位高亮
+      var actWind = (s.turn - s.dealer + 4) % 4;
+      winds.forEach(function (wc, i) {
+        var isAct = !s.over && i === actWind;
+        ctx.fillStyle = isAct ? '#ffd600' : '#8a8a8a';
+        ctx.font = 'bold 13px ' + FONT_FACE; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(wc, wpos[i][0], wpos[i][1]);
+      });
+      // 中央倒计时/牌墙数
+      ctx.fillStyle = '#ffd600'; ctx.font = 'bold 30px ' + FONT_FACE;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(Math.max(0, s.wallCount || 0)), cx, cy + 2);
+
+      /* ---------- 四角头像 ---------- */
+      function cornerAvatar(px, py, p, isMe) {
+        var nm = names[p] || (isMe ? '我' : T('Player {0}', p));
         var act = s.turn === p && !s.over;
-        luxPanel(ctx, 6, y, W - 12, bh, 8, act);
-        var rel = T(p === me % 4 + 1 ? 'next' : p === (me + 2) % 4 + 1 ? 'previous' : 'across');
-        var nm = names[p] || T('Player {0}', p);
-        avatar(ctx, 26, y + 16, 12, (self.wind(s, p) || '?').charAt(0), act);
-        text(ctx, self.wind(s, p) + ' ' + T(nm) + ' (' + rel + ')' + (p === s.dealer ? T(' · dealer') : ''), 44, y + 11, 12, act ? '#ffd600' : '#cfe8d5', true, 'left');
-        // 手牌数 / 亮牌
-        var mx = W - 12;
-        if (s.over && s.hands[p]) { var hh = s.hands[p]; hh.forEach(function (t, i) { drawTile(ctx, 14 + i * (rw + 1), y + 19, rw, rh, t, {}); }); }
-        else text(ctx, T('Hand {0}', s.handCounts[p]), W - 14, y + 11, 12, '#cfe8d5', false, 'right');
-        // 副露(右上)
-        var melds = s.melds[p], mxw = 0; var mtw = LC ? (wide ? 13 : 11) : 11; melds.forEach(function (m) { mxw += m.tiles.length * (mtw + 1) + 4; });
-        var cx = W - 12 - mxw; melds.forEach(function (m) { cx += drawMeld(ctx, m, cx, y + 20, mtw, LC ? (wide ? 18 : 16) : 16) + 0; });
-        // 牌河
-        var ds = s.discards[p], per = Math.floor((W - 28) / (tw + 1)), startY = y + 40;
-        ds.forEach(function (t, i) { var col = i % per, row = Math.floor(i / per); drawTile(ctx, 14 + col * (tw + 1), startY + row * (th - 2) + (s.over ? (LC ? rh - 14 : 14) : 0), tw, th - 3, t, { hl: s.lastDiscard && s.lastDiscard.seat === p && i === ds.length - 1 && !s.over }); });
-        y += bh + 4;
-      });
-      // 我的牌河与副露
-      var ds2 = s.discards[me], per2 = Math.floor((W - 28) / (tw + 1)), act2 = s.turn === me && !s.over;
-      luxPanel(ctx, 6, y, W - 12, LC ? 68 : 64, 8, act2);
-      text(ctx, self.wind(s, me) + ' ' + T(names[me] || 'Me') + (me === s.dealer ? T(' · dealer') : '') + '  ' + T('Wall {0}', Math.max(0, s.wallCount - 14)), 14, y + 11, 12, act2 ? '#ffd600' : '#cfe8d5', true, 'left');
-      ds2.forEach(function (t, i) { drawTile(ctx, 14 + (i % per2) * (tw + 1), y + 20 + Math.floor(i / per2) * (th - 2), tw, th - 3, t, { hl: s.lastDiscard && s.lastDiscard.seat === me && i === ds2.length - 1 && !s.over }); });
-      y += LC ? 72 : 68;
-      // 手牌
-      var hand = s.hands[me] || [], n = hand.length, melds = s.melds[me], two = false, perRow = two ? Math.ceil((n + (s.drawn >= 0 && s.turn === me && s.phase === 'discard' ? 0 : 0)) / 2) : n;
-      var hw = two ? Math.min(46, (W - 16) / (Math.max(7, perRow) + 0.3)) : Math.min(W >= 700 ? (LC ? 40 : 42) : (LC ? 26 : 27), (W - 12 - 4) / (LC ? 15.5 : 15)), hh2 = hw * (LC ? 1.36 : 1.42), hy = y + 30;
-      var mw = two ? hw * 0.5 : hw * 0.62, meldW = 0; melds.forEach(function (m) { meldW += m.tiles.length * (mw + 1) + 6; });
-      var gap = s.drawn >= 0 && s.turn === me && s.phase === 'discard' ? 8 : 0, total = n * (hw + 1) + gap + (two ? 0 : meldW), sx = Math.max(4, (W - total) / 2);
-      var cx2 = sx; if (two) { cx2 = Math.max(4, (W - meldW) / 2); }
-      melds.forEach(function (m) { cx2 += drawMeld(ctx, m, cx2, two ? hy : hy + hh2 * 0.3, mw, two ? hh2 * 0.55 : hh2 * 0.7); });
-      if (two && melds.length) hy += hh2 * 0.55 + 6;
-      var drawnIdx = -1; if (gap) { for (var q = n - 1; q >= 0; q--) if (hand[q] === s.drawn) { drawnIdx = q; break; } }
-      // 摸到的牌排在最右
-      var arr = hand.map(function (t, i) { return { t: t, i: i }; }); if (drawnIdx >= 0) { var dd = arr.splice(drawnIdx, 1)[0]; arr.push(dd); }
-      var perR = two ? Math.min(7, Math.max(1, perRow)) : arr.length; if (two) perR = Math.max(perR, Math.ceil(arr.length / 2));
-      if (!two) cx2 = cx2 + 0;
+        // 头像圆
+        ctx.save();
+        if (act) { ctx.shadowColor = 'rgba(255,214,0,0.8)'; ctx.shadowBlur = 12; }
+        ctx.beginPath(); ctx.arc(px, py, 22, 0, 6.3);
+        var ag = ctx.createLinearGradient(px-22, py-22, px+22, py+22);
+        // 腾讯风格: 明亮的头像底色
+        var cols = ['#ff9a3c', '#4db8ff', '#ff6b9d', '#7ed321'];
+        ag.addColorStop(0, cols[(p-1) % 4]); ag.addColorStop(1, cols[(p-1) % 4] + 'aa');
+        ctx.fillStyle = ag; ctx.fill(); ctx.restore();
+        ctx.beginPath(); ctx.arc(px, py, 22, 0, 6.3);
+        ctx.strokeStyle = act ? '#ffd600' : '#fff'; ctx.lineWidth = act ? 3 : 2; ctx.stroke();
+        // 风位字
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 18px ' + FONT_FACE;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(self.windChar(s, p), px, py + 1);
+        // 名字
+        ctx.fillStyle = act ? '#ffd600' : '#fff'; ctx.font = '12px ' + FONT_FACE;
+        ctx.textAlign = 'center';
+        var dnm = T(nm); if (dnm.length > 6) dnm = dnm.slice(0, 5) + '…';
+        ctx.fillText(dnm + (p === s.dealer ? ' ·庄' : ''), px, py + 36);
+      }
+      cornerAvatar(fx + 40, fy + 40, pLeft, false);
+      cornerAvatar(fx + fw - 40, fy + 40, pAcross, false);
+      cornerAvatar(fx + fw - 40, fy + fh - 64, pRight, false);
+      cornerAvatar(fx + 40, fy + fh - 64, me, true);
+
+      /* ---------- 牌墙 (绿色牌背, 沿桌边) ---------- */
+      function tileBack(x, y, w, h, vertical) {
+        rrect(ctx, x, y, w, h, 3);
+        var bg = ctx.createLinearGradient(x, y, x, y + h);
+        bg.addColorStop(0, '#3ec46a'); bg.addColorStop(0.5, '#27a552'); bg.addColorStop(1, '#1a7d3e');
+        ctx.fillStyle = bg; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+        // 高光
+        rrect(ctx, x+2, y+2, w-4, h-4, 2); ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.stroke();
+      }
+      // 上家牌墙 (顶部横排)
+      var wallN = Math.min(14, Math.floor((s.wallCount || 0) / 4));
+      for (var i = 0; i < 14; i++) {
+        if (i < wallN) tileBack(cx - 7*17 + i*17, fy + 52, 15, 22, false);
+      }
+      // 左右牌墙 (竖排)
+      for (var j = 0; j < 14; j++) {
+        if (j < wallN) {
+          tileBack(fx + 52, cy - 7*24 + j*24, 22, 15, true);
+          tileBack(fx + fw - 74, cy - 7*24 + j*24, 22, 15, true);
+        }
+      }
+
+      /* ---------- 牌河 (中央区域, 围绕骰子盒) ---------- */
+      function drawDiscards(p, dx, dy, cols, tscale) {
+        var ds = s.discards[p] || [], tw2 = 20 * tscale, th2 = 28 * tscale;
+        ds.forEach(function (t, idx) {
+          var col = idx % cols, row = Math.floor(idx / cols);
+          var hl = s.lastDiscard && s.lastDiscard.seat === p && idx === ds.length - 1 && !s.over;
+          drawTile(ctx, dx + col * (tw2 + 1), dy + row * (th2 - 1), tw2, th2 - 2, t, { hl: hl });
+        });
+      }
+      // 各家牌河位置 (骰子盒四周)
+      drawDiscards(pAcross, cx - 63, by - 68, 6, 0.85);      // 对家 (骰子盒上方)
+      drawDiscards(pLeft, bx - 88, cy - 42, 4, 0.85);        // 上家 (骰子盒左方)
+      drawDiscards(pRight, bx + boxS + 22, cy - 42, 4, 0.85); // 下家 (骰子盒右方)
+      drawDiscards(me, cx - 63, by + boxS + 14, 6, 0.85);    // 我 (骰子盒下方)
+
+      /* ---------- 副露 (各家旁边) ---------- */
+      function drawMelds(p, mx, my, tscale) {
+        var melds = s.melds[p] || [], mtw = 13 * tscale, mth = 18 * tscale;
+        melds.forEach(function (m) { mx += drawMeld(ctx, m, mx, my, mtw, mth); });
+        return mx;
+      }
+      drawMelds(pAcross, cx + 80, by - 44, 0.9);
+      drawMelds(pLeft, fx + 80, fy + 70, 0.9);
+      drawMelds(pRight, fx + fw - 180, fy + 70, 0.9);
+
+      /* ---------- 我的手牌 (底部大牌) ---------- */
+      var hand = s.hands[me] || [], n = hand.length;
+      var hw = Math.min(42, (W - 24) / 15), hh2 = hw * 1.42;
+      var hy = fy + fh - hh2 - 52;
+      var melds = s.melds[me], mw = hw * 0.62, meldW = 0;
+      melds.forEach(function (m) { meldW += m.tiles.length * (mw + 1) + 6; });
+      var gap = s.drawn >= 0 && s.turn === me && s.phase === 'discard' ? 10 : 0;
+      var total = n * (hw + 1) + gap + meldW, sx = Math.max(8, (W - total) / 2);
+      var mxx = sx;
+      melds.forEach(function (m) { mxx += drawMeld(ctx, m, mxx, hy + hh2 * 0.3, mw, hh2 * 0.7); });
+      var drawnIdx = -1;
+      if (gap) { for (var q = n - 1; q >= 0; q--) if (hand[q] === s.drawn) { drawnIdx = q; break; } }
+      var arr = hand.map(function (t, i) { return { t: t, i: i }; });
+      if (drawnIdx >= 0) { var dd = arr.splice(drawnIdx, 1)[0]; arr.push(dd); }
       arr.forEach(function (e, j) {
-        var row = two ? Math.floor(j / perR) : 0, col = two ? j % perR : j, rowN = two ? Math.min(perR, arr.length - row * perR) : arr.length;
-        var x = two ? (W - rowN * (hw + 1)) / 2 + col * (hw + 1) : cx2 + col * (hw + 1) + (gap && j === arr.length - 1 ? gap : 0);
-        var sel = g.selTile === e.t, y0 = hy + row * (hh2 + 6), yy = y0 - (sel ? 12 : 0);
+        var x = mxx + j * (hw + 1) + (gap && j === arr.length - 1 ? gap : 0);
+        var sel = g.selTile === e.t, yy = hy - (sel ? 14 : 0);
+        // 腾讯风格: 手牌加阴影更有立体感
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
         drawTile(ctx, x, yy, hw, hh2, e.t, { sel: sel });
-        app.hits.push({ x: x, y: y0 - 12, w: hw + 1, h: hh2 + 12, click: false, label: 'tile' + e.t, cb: function () { self.tapTile(g, e.t, app); } });
+        ctx.restore();
+        app.hits.push({ x: x, y: hy - 14, w: hw + 1, h: hh2 + 14, click: false, label: 'tile' + e.t, cb: function () { self.tapTile(g, e.t, app); } });
       });
-      hy += two ? hh2 + 6 : 0;
       g.handBottom = hy + hh2;
-      // 中央金色徽标 (手牌下方空白处)
-      var ey = hy + hh2 + 90;
-      if (ey < rect.y + rect.h - 60) centerEmblem(ctx, W / 2, ey, 34);
+
+      /* ---------- 顶部信息条 ---------- */
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.font = '12px ' + FONT_FACE; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(T('Wall {0}', Math.max(0, s.wallCount || 0)), cx, fy + 18);
     },
     tapTile: function (g, t, app) {
       var s = g.vs; if (s.over) return;
