@@ -255,13 +255,14 @@
       var s = g.vs, me = g.seat, W = app.W, H = app.H, names = g.names || {}, self = this;
       var top = rect.y, tableH = rect.h;
 
-      /* ---------- 腾讯风格: 青蓝色绒面牌桌 ---------- */
-      // 木框
-      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 15; ctx.shadowOffsetY = 5;
-      if (typeof Lux !== 'undefined' && Lux.wood) Lux.wood(ctx, 4, top + 4, W - 8, tableH - 8, 18);
+      /* ---------- 腾讯风格: 青蓝色绒面牌桌 (铺满无缝) ---------- */
+      // 木框 (贴边, 无留白)
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+      if (typeof Lux !== 'undefined' && Lux.wood) Lux.wood(ctx, 0, top, W, tableH, 0);
+      else { ctx.fillStyle = '#4a2c16'; ctx.fillRect(0, top, W, tableH); }
       ctx.restore();
-      // 青蓝绒面 (腾讯欢乐麻将标志性颜色)
-      var fx = 18, fy = top + 18, fw = W - 36, fh = tableH - 36;
+      // 青蓝绒面 (贴边铺满)
+      var fx = 8, fy = top + 8, fw = W - 16, fh = tableH - 16;
       rrect(ctx, fx, fy, fw, fh, 12);
       var fg = ctx.createRadialGradient(W/2, fy + fh*0.45, 20, W/2, fy + fh*0.5, Math.max(fw, fh)*0.75);
       fg.addColorStop(0, '#2eb5a0'); fg.addColorStop(0.55, '#1e9a88'); fg.addColorStop(1, '#147a6c');
