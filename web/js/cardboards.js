@@ -78,16 +78,51 @@
   var NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九'], SUITCH = ['万', '筒', '条'], NUM_EN = ['1', '2', '3', '4', '5', '6', '7', '8', '9'], SUITCH_EN = ['CHR', 'DOT', 'BAM'], HON_EN = ['E', 'S', 'W', 'N', 'RD', 'GD'], SUITCOL = ['#b71c1c', '#1565c0', '#2e7d32'];
   function drawTile(ctx, x, y, w, h, k, o) {
     o = o || {};
-    if (LC && LC.tile(ctx, x, y, w, h, k, o)) return;
-    rrect(ctx, x + 1, y + 2, w, h, 3); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
-    rrect(ctx, x, y, w, h, 3);
-    if (o.back) { ctx.fillStyle = '#1b7a4b'; ctx.fill(); ctx.strokeStyle = '#d6efe0'; ctx.lineWidth = 1; ctx.stroke(); return; }
-    ctx.fillStyle = o.hl ? '#fff3b0' : '#f7f3e3'; ctx.fill(); ctx.strokeStyle = o.sel ? '#1e88e5' : '#9a9a8a'; ctx.lineWidth = o.sel ? 2.5 : 1; ctx.stroke();
+    // 腾讯风格 3D 麻将牌: 厚度边 + 暖白牌面
+    var dep = Math.max(2, Math.min(4, w * 0.12)); // 厚度
+    var r = Math.max(2, w * 0.14);
+    // 阴影
+    rrect(ctx, x + 1, y + 2 + dep, w, h, r); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fill();
+    // 厚度边 (底部 + 右侧, 深象牙色)
+    rrect(ctx, x, y + dep, w, h, r); ctx.fillStyle = '#d8cfae'; ctx.fill();
+    rrect(ctx, x + dep * 0.5, y + dep, w - dep * 0.5, h - dep * 0.5, r);
+    ctx.fillStyle = '#e8e0c4'; ctx.fill();
+    // 牌面
+    rrect(ctx, x, y, w, h - dep * 0.3, r);
+    if (o.back) {
+      // 腾讯绿牌背: 亮绿 + 菱形暗纹
+      var bg = ctx.createLinearGradient(x, y, x, y + h);
+      bg.addColorStop(0, '#35d06a'); bg.addColorStop(0.5, '#25b456'); bg.addColorStop(1, '#1a8a40');
+      ctx.fillStyle = bg; ctx.fill();
+      ctx.save(); rrect(ctx, x, y, w, h - dep * 0.3, r); ctx.clip(); ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+      for (var di = -h; di < w + h; di += 8) { ctx.beginPath(); ctx.moveTo(x + di, y); ctx.lineTo(x + di + h, y + h); ctx.stroke(); }
+      ctx.restore();
+    } else {
+      // 暖白牌面
+      var fg = ctx.createLinearGradient(x, y, x, y + h);
+      if (o.hl) { fg.addColorStop(0, '#fff8c8'); fg.addColorStop(1, '#ffe98a'); }
+      else { fg.addColorStop(0, '#fffdf6'); fg.addColorStop(0.6, '#fff9ec'); fg.addColorStop(1, '#f5edd8'); }
+      ctx.fillStyle = fg; ctx.fill();
+    }
+    // 描边
+    rrect(ctx, x, y, w, h - dep * 0.3, r);
+    ctx.strokeStyle = o.sel ? '#1e88e5' : o.hl ? '#e6a800' : '#b8ab8a'; ctx.lineWidth = o.sel || o.hl ? 2.5 : 1.2; ctx.stroke();
+    // 牌面内高光
+    rrect(ctx, x + 1.5, y + 1.5, w - 3, (h - dep * 0.3) * 0.4, r * 0.6);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    if (o.back) return;
+    // 牌面字符
     var fs = Math.max(8, w * 0.52);
-    var en = I.lang !== 'zh';
-    if (k < 27) { var su = Math.floor(k / 9); text(ctx, (en ? NUM_EN : NUM)[k % 9], x + w / 2, y + h * 0.33, fs, '#222', true); text(ctx, (en ? SUITCH_EN : SUITCH)[su], x + w / 2, y + h * 0.7, en ? fs * 0.5 : fs * 0.9, SUITCOL[su], true); }
-    else if (k === 33) { rrect(ctx, x + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6, 2); ctx.strokeStyle = '#1565c0'; ctx.lineWidth = 2; ctx.stroke(); }
-    else text(ctx, en ? HON_EN[k - 27] : T(M.KN[k]), x + w / 2, y + h * 0.5, en ? fs * 0.9 : fs * 1.2, k === 31 ? '#c62828' : k === 32 ? '#2e7d32' : '#222', true);
+    var en = typeof I !== 'undefined' && I.lang !== 'zh';
+    var cy = y + (h - dep * 0.3) / 2;
+    if (k < 27) {
+      var su = Math.floor(k / 9);
+      text(ctx, (en ? NUM_EN : NUM)[k % 9], x + w / 2, y + (h - dep * 0.3) * 0.32, fs, '#1a1a1a', true);
+      text(ctx, (en ? SUITCH_EN : SUITCH)[su], x + w / 2, y + (h - dep * 0.3) * 0.70, en ? fs * 0.5 : fs * 0.88, SUITCOL[su], true);
+    }
+    else if (k === 33) { rrect(ctx, x + w * 0.22, y + (h - dep * 0.3) * 0.2, w * 0.56, (h - dep * 0.3) * 0.6, 2); ctx.strokeStyle = '#1565c0'; ctx.lineWidth = Math.max(1.5, w * 0.08); ctx.stroke(); }
+    else text(ctx, en ? HON_EN[k - 27] : T(M.KN[k]), x + w / 2, cy, en ? fs * 0.9 : fs * 1.15, k === 31 ? '#d32f2f' : k === 32 ? '#2e8b47' : '#1a1a1a', true);
   }
   function drawMeld(ctx, m, x, y, w, h) { // 返回占用宽度
     var tiles = m.tiles.slice(0, 4), i;
