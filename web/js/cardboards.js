@@ -255,20 +255,13 @@
       var s = g.vs, me = g.seat, W = app.W, H = app.H, names = g.names || {}, self = this;
       var top = rect.y, tableH = rect.h;
 
-      /* ---------- 腾讯风格: 青蓝色绒面牌桌 (铺满无缝) ---------- */
-      // 木框 (贴边, 无留白)
-      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
-      if (typeof Lux !== 'undefined' && Lux.wood) Lux.wood(ctx, 0, top, W, tableH, 0);
-      else { ctx.fillStyle = '#4a2c16'; ctx.fillRect(0, top, W, tableH); }
-      ctx.restore();
-      // 青蓝绒面 (贴边铺满)
-      var fx = 8, fy = top + 8, fw = W - 16, fh = tableH - 16;
-      rrect(ctx, fx, fy, fw, fh, 12);
+      /* ---------- 腾讯风格: 青蓝绒面铺满全屏 (无木框无缝) ---------- */
+      var fx = 0, fy = top, fw = W, fh = tableH;
       var fg = ctx.createRadialGradient(W/2, fy + fh*0.45, 20, W/2, fy + fh*0.5, Math.max(fw, fh)*0.75);
       fg.addColorStop(0, '#2eb5a0'); fg.addColorStop(0.55, '#1e9a88'); fg.addColorStop(1, '#147a6c');
-      ctx.fillStyle = fg; ctx.fill();
+      ctx.fillStyle = fg; ctx.fillRect(fx, fy, fw, fh); // 直角铺满, 无圆角露底
       // 绒面暗纹
-      ctx.save(); rrect(ctx, fx, fy, fw, fh, 12); ctx.clip(); ctx.globalAlpha = 0.06;
+      ctx.save(); ctx.rect(fx, fy, fw, fh); ctx.clip(); ctx.globalAlpha = 0.06;
       for (var pi = 0; pi < 40; pi++) {
         ctx.beginPath(); ctx.arc(fx + (pi*97 % fw), fy + (pi*57 % fh), 30 + (pi*13 % 40), 0, 6.3);
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
