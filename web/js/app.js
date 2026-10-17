@@ -485,6 +485,7 @@
   /* ---------- 游戏控制器 ---------- */
   P.newGameCtl = function (game, mode, seat) { return { game: game, mode: mode, seat: seat, state: null, sel: null, legal: [], level: 2, setup: null, overShown: false, players: null, status: 'playing' }; };
   P.startLocal = function (game, level, seat) {
+    if (game === 'doudizhu') { try { window.location.href = 'doudizhu-standalone.html'; } catch (e) {} return; }
     if (E.SEATS[game] > 2) return this.startLocalMulti(game, level);
     var eng = E[game], g = this.newGameCtl(game, 'ai', seat); g.level = level; g.aiSeat = 3 - seat; g.state = eng.newGame();
     if (game === 'luzhanqi') { Luz.setup(g.state, g.aiSeat, Luz.randomLayout()); g.setup = { layout: Luz.randomLayout(), sel: null, done: false }; }
