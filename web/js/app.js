@@ -652,6 +652,7 @@
 
   /* ================= 斗地主 / 麻将(3、4 人,电脑补位)================= */
   P.startLocalMulti = function (game, level, n) {
+    if (game === 'doudizhu') { try { window.location.href = 'doudizhu-standalone.html'; } catch (e) {} return; }
     var eng = E[game], info = this.gameInfo(game), g = this.newGameCtl(game, 'ai', 1);
     if (game === 'zhajinhua' || game === 'holdem') { n = Math.max(2, Math.min(6, n || this.diff.n || 5)); g.n = n; }
     var prevG = this.g;
